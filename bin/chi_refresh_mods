@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 """
-USAGE: ./chi_make_task [TASK_ROOT]
+USAGE: ./chi_refresh_mods [MOD_REPO_DIR]
 """
 
 import sys
 from chimaera_util.codegen import ChimaeraCodegen
 
-TASK_ROOT = sys.argv[1]
+MOD_REPO_DIR = sys.argv[1]
 gen = ChimaeraCodegen()
-gen.make_task(TASK_ROOT)
-
+gen.refresh_repo_methods(MOD_REPO_DIR)

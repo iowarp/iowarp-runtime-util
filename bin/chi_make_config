@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 """
-USAGE:
-    cd chimaera_util/bin
-    python3 chi_make_config.py
+USAGE: chi_make_config [CHI_ROOT (optional)]
 
 OUTPUT:
     ${CHI}/src/config_client_default.h (if client)
@@ -11,6 +9,12 @@ OUTPUT:
 """
 
 from chimaera_util.codegen import ChimaeraCodegen
+import sys, os
+
+if len(sys.argv) > 1:
+    CHI_ROOT = sys.argv[1]
+else:
+    CHI_ROOT = os.getcwd()
 
 gen = ChimaeraCodegen()
-gen.make_configs()
+gen.make_configs(CHI_ROOT)

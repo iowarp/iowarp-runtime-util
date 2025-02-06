@@ -5,8 +5,8 @@ Generate code for chimaera
 import os
 import sys
 import yaml
-from chimaera_util.util.paths import CHIMAERA_ROOT
 from chimaera_util.util.templates import task_template, client_method_template, runtime_method_template
+from chimaera_util.util.paths import CHIMAERA_TASK_TEMPL
 
 
 class ChimaeraCodegen:
@@ -29,20 +29,20 @@ class ChimaeraCodegen:
         macro_body = ' \\\n'.join(lines)
         print(f'{macro_def}{macro_body}')
 
-    def make_configs(self):
+    def make_configs(self, CHI_ROOT):
         """
         Creates the default chimaera client and server configurations
         """
         self._create_config(
-            path=f"{CHIMAERA_ROOT}/config/chimaera_client_default.yaml",
+            path=f"{CHI_ROOT}/config/chimaera_client_default.yaml",
             var_name="kChiDefaultClientConfigStr",
-            config_path=f"{CHIMAERA_ROOT}/include/chimaera/config/config_client_default.h",
+            config_path=f"{CHI_ROOT}/include/chimaera/config/config_client_default.h",
             macro_name="CHI_CLIENT"
         )
         self._create_config(
-            path=f"{CHIMAERA_ROOT}/config/chimaera_server_default.yaml",
+            path=f"{CHI_ROOT}/config/chimaera_server_default.yaml",
             var_name="kChiServerDefaultConfigStr",
-            config_path=f"{CHIMAERA_ROOT}/include/chimaera/config/config_server_default.h",
+            config_path=f"{CHI_ROOT}/include/chimaera/config/config_server_default.h",
             macro_name="CHI_SERVER"
         )
 
@@ -74,61 +74,60 @@ class ChimaeraCodegen:
         with open(config_path, 'w') as fp:
             fp.write(config)
 
-    def make_task(self, TASK_ROOT):
+    def make_task(self, MOD_ROOT):
         """
         Bootstraps a task. Copies all the necessary files and replaces. This
         is an aggressive operation.
         """
-        TASK_TEMPL_ROOT = f'{CHIMAERA_ROOT}/tasks/TASK_NAME'
-        TASK_NAME = os.path.basename(TASK_ROOT)
-        if os.path.exists(f'{TASK_ROOT}/src'):
+        TASK_NAME = os.path.basename(MOD_ROOT)
+        if os.path.exists(f'{MOD_ROOT}/src'):
             ret = input('This task seems bootstrapped, do you really want to continue? (yes/no): ')
             if ret != 'yes':
                 print('Skipping...')
                 sys.exit(0)
-        os.makedirs(f'{TASK_ROOT}/src', exist_ok=True)
-        os.makedirs(f'{TASK_ROOT}/include/{TASK_NAME}', exist_ok=True)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'CMakeLists.txt', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'src/CMakeLists.txt', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'src/TASK_NAME.cc', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'src/TASK_NAME_monitor.py', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME.h', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_lib_exec.h', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_tasks.h', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_methods.h', TASK_NAME)
-        self._copy_replace(TASK_ROOT, TASK_TEMPL_ROOT, 'include/TASK_NAME/TASK_NAME_methods.yaml', TASK_NAME)
+        os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
+        os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'CMakeLists.txt', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/CMakeLists.txt', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME.cc', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME_monitor.py', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME.h', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_lib_exec.h', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_tasks.h', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_methods.h', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_methods.yaml', TASK_NAME)
 
-    def _copy_replace(self, TASK_ROOT, TASK_TEMPL_ROOT, rel_path, TASK_NAME):
+    def _copy_replace(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_path, TASK_NAME):
         """
-        Copies a file from TASK_TEMPL_ROOT to TASK_ROOT and renames
+        Copies a file from CHIMAERA_TASK_TEMPL to MOD_ROOT and renames
         TASK_TEMPL to the value of TASK_NAME
         """
-        with open(f'{TASK_TEMPL_ROOT}/{rel_path}') as fp:
+        with open(f'{CHIMAERA_TASK_TEMPL}/{rel_path}') as fp:
             text = fp.read()
         text = text.replace('TASK_NAME', TASK_NAME)
         rel_path = rel_path.replace('TASK_NAME', TASK_NAME)
-        with open(f'{TASK_ROOT}/{rel_path}', 'w') as fp:
+        with open(f'{MOD_ROOT}/{rel_path}', 'w') as fp:
             fp.write(text)
 
-    def refresh_repo_methods(self, TASK_REPO_DIR):
-        TASK_REPO_DIR = os.path.abspath(TASK_REPO_DIR)
-        TASK_ROOTS = [os.path.join(TASK_REPO_DIR, item)
-                      for item in os.listdir(TASK_REPO_DIR)]
-        for TASK_ROOT in TASK_ROOTS:
+    def refresh_repo_methods(self, MOD_REPO_DIR):
+        MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
+                      for item in os.listdir(MOD_REPO_DIR)]
+        for MOD_ROOT in MOD_ROOTS:
             try:
-                self.refresh_methods(TASK_ROOT)
+                self.refresh_methods(MOD_ROOT)
             except Exception as e:
                 print(e)
                 pass
 
-    def refresh_methods(self, TASK_ROOT):
+    def refresh_methods(self, MOD_ROOT):
         """
         Refreshes autogenerated code in the task.
         """
-        if not os.path.exists(f'{TASK_ROOT}/include'):
+        if not os.path.exists(f'{MOD_ROOT}/include'):
             return
-        MOD_NAME = os.path.basename(TASK_ROOT)
-        METHODS_YAML = f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}_methods.yaml'
+        MOD_NAME = os.path.basename(MOD_ROOT)
+        METHODS_YAML = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_methods.yaml'
 
         # Load methods
         with open(METHODS_YAML) as fp:
@@ -138,13 +137,13 @@ class ChimaeraCodegen:
         methods = sorted(methods.items(), key=lambda x: x[1])
 
         #Create paths
-        self.METHODS_H = f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}_methods.h'
+        self.METHODS_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_methods.h'
         self.METHOD_MACRO = f'CHI_{MOD_NAME.upper()}_METHODS_H_'
-        self.LIB_EXEC_H = f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}_lib_exec.h'
+        self.LIB_EXEC_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_lib_exec.h'
         self.LIB_EXEC_MACRO = f'CHI_{MOD_NAME.upper()}_LIB_EXEC_H_'
-        self.NEW_TASKS_H = f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h'
-        self.NEW_CLIENT_H = f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h'
-        self.NEW_RUNTIME_CC = f'{TASK_ROOT}/src/{MOD_NAME}.temp_cc'
+        self.NEW_TASKS_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h'
+        self.NEW_CLIENT_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h'
+        self.NEW_RUNTIME_CC = f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc'
 
         # Refresh the files
         self.refresh_methods_h(methods)
@@ -370,22 +369,22 @@ class ChimaeraCodegen:
         with open(self.NEW_RUNTIME_CC, 'w') as fp:
             fp.write('\n'.join(lines))
 
-    def clear_autogen_temp(self, TASK_REPO_DIR):
-        TASK_ROOTS = [os.path.join(TASK_REPO_DIR, item)
-                      for item in os.listdir(TASK_REPO_DIR)]
-        for TASK_ROOT in TASK_ROOTS:
-            self._clear_autogen_temp(TASK_ROOT)
+    def clear_autogen_temp(self, MOD_REPO_DIR):
+        MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
+                      for item in os.listdir(MOD_REPO_DIR)]
+        for MOD_ROOT in MOD_ROOTS:
+            self._clear_autogen_temp(MOD_ROOT)
 
-    def _clear_autogen_temp(self, TASK_ROOT):
+    def _clear_autogen_temp(self, MOD_ROOT):
         """
         Removes autogenerated temporary files from the task.
         """
-        if not os.path.exists(f'{TASK_ROOT}/include'):
+        if not os.path.exists(f'{MOD_ROOT}/include'):
             return
-        MOD_NAME = os.path.basename(TASK_ROOT)
-        os.remove(f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h')
-        os.remove(f'{TASK_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h')
-        os.remove(f'{TASK_ROOT}/src/{MOD_NAME}.temp_cc')
+        MOD_NAME = os.path.basename(MOD_ROOT)
+        os.remove(f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h')
+        os.remove(f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h')
+        os.remove(f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc')
 
     def tmpl(self, tmpl_str, task_name, method_name, method_enum_name):
         return tmpl_str.replace('##task_name##', task_name) \
