@@ -121,12 +121,13 @@ class ChimaeraCodegen:
                 print(e)
                 pass
         # Refresh the module repo cmake
-        self.refresh_repo_cmake(MOD_REPO_DIR)
+        # self.refresh_repo_cmake(MOD_REPO_DIR)
 
     def refresh_repo_cmake(self, MOD_REPO_DIR):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
         # Refresh all methods
-        MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR)]
+        MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR) 
+                     if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')]
         MOD_NAMES = sorted(MOD_NAMES)
         lines = []
         lines.append('cmake_minimum_required(VERSION 3.25)')
