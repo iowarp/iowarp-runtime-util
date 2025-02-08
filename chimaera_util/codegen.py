@@ -113,12 +113,33 @@ class ChimaeraCodegen:
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
         MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
                       for item in os.listdir(MOD_REPO_DIR)]
+        # Refresh all methods
         for MOD_ROOT in MOD_ROOTS:
             try:
                 self.refresh_methods(MOD_ROOT)
             except Exception as e:
                 print(e)
                 pass
+        # Refresh the module repo cmake
+        self.refresh_repo_cmake(MOD_REPO_DIR)
+
+    def refresh_repo_cmake(self, MOD_REPO_DIR):
+        MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        # Refresh all methods
+        MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR)]
+        MOD_NAMES = sorted(MOD_NAMES)
+        lines = []
+        lines.append('cmake_minimum_required(VERSION 3.25)')
+        lines.append('project(chimaera_modules)')
+        lines.append('if (NOT CHIMAERA_IS_MAIN_PROJECT)')
+        lines.append('  find_package(Chimaera CONFIG REQUIRED)')
+        lines.append('endif()')
+        lines.append('')
+        for MOD_NAME in MOD_NAMES:
+            lines.append(f'add_subdirectory({MOD_NAME})')
+        with open(f'{MOD_REPO_DIR}/CMakeLists.txt', 'w') as fp:
+            fp.write('\n'.join(lines))
+
 
     def refresh_methods(self, MOD_ROOT):
         """
