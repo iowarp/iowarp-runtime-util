@@ -121,7 +121,7 @@ class ChimaeraCodegen:
                 print(e)
                 pass
         # Refresh the module repo cmake
-        # self.refresh_repo_cmake(MOD_REPO_DIR)
+        self.refresh_repo_cmake(MOD_REPO_DIR)
 
     def refresh_repo_cmake(self, MOD_REPO_DIR):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
