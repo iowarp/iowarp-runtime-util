@@ -153,6 +153,7 @@ class ChimaeraCodegen:
                 sys.exit(0)
         os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
         os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
+        print('HERE!!!')
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'CMakeLists.txt', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'chimaera_mod.yaml', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/CMakeLists.txt', TASK_NAME)
