@@ -9,4 +9,4 @@ from chimaera_util.codegen import ChimaeraCodegen
 
 MOD_REPO_DIR = sys.argv[1]
 gen = ChimaeraCodegen()
-gen.refresh_repo_methods(MOD_REPO_DIR)
+gen.refresh_repo(MOD_REPO_DIR)

@@ -177,6 +177,7 @@ class ChimaeraCodegen:
             fp.write(text)
 
     def refresh_repo(self, MOD_REPO_DIR):
+        print(f'Refreshing repository at {MOD_REPO_DIR}')
         self.refresh_repo_methods(MOD_REPO_DIR)
         self.refresh_repo_cmake(MOD_REPO_DIR)
 
