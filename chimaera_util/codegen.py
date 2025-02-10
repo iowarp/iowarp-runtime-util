@@ -153,7 +153,6 @@ class ChimaeraCodegen:
                 sys.exit(0)
         os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
         os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
-        print('HERE!!!')
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'CMakeLists.txt', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'chimaera_mod.yaml', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/CMakeLists.txt', TASK_NAME)
@@ -201,7 +200,7 @@ class ChimaeraCodegen:
         camel_ns = to_camel_case(namespace) 
         MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR) 
                      if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')
-                     and os.path.exists(f'{MOD_REPO_DIR}/{MOD_NAME}/')]
+                     and os.path.exists(f'{MOD_REPO_DIR}/{MOD_NAME}/chimaera_mod.yaml')]
         MOD_NAMES = sorted(MOD_NAMES) 
         subdirs = '\n'.join([f'add_subdirectory({MOD_NAME})' 
                              for MOD_NAME in MOD_NAMES])
