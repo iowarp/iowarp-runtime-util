@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+
+"""
+USAGE: ./chi_make_repo [MOD_REPO_DIR] [MOD_NAMESPACE]
+
+MOD_REPO_DIR is the path to the module repo.
+MOD_NAMESPACE is the namespace of the module. This
+translates to a cmake project name and install namespace.
+"""
+
+import sys
+from chimaera_util.codegen import ChimaeraCodegen
+
+MOD_REPO_DIR = sys.argv[1]
+gen = ChimaeraCodegen()
+gen.refresh_repo(MOD_REPO_DIR)

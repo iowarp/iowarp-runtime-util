@@ -3,7 +3,7 @@
 """
 # MODULE_ROOT is the path to the module. The mod
 # should be within a module repo.
-USAGE: ./chi_make_task [MODULE_ROOT]
+USAGE: ./chi_make_mod [MODULE_ROOT]
 """
 
 import sys
@@ -11,5 +11,5 @@ from chimaera_util.codegen import ChimaeraCodegen
 
 MOD_ROOT = sys.argv[1]
 gen = ChimaeraCodegen()
-gen.make_task(MOD_ROOT)
+gen.make_mod(MOD_ROOT)
 

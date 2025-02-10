@@ -8,6 +8,50 @@ import yaml
 from chimaera_util.util.templates import task_template, client_method_template, runtime_method_template
 from chimaera_util.util.paths import CHIMAERA_TASK_TEMPL
 
+BASE_REPO_CMAKE = """
+cmake_minimum_required(VERSION 3.25)
+project({namespace})
+set(MOD_NAMESPACE {namespace})
+
+# FIND CHIMAERA
+if (NOT CHIMAERA_IS_MAIN_PROJECT)
+  find_package(Chimaera CONFIG REQUIRED)
+endif()
+
+# SET INSTALL VARIABLES
+if(NOT CHIMAERA_INSTALL_BIN_DIR)
+  set(CHIMAERA_INSTALL_BIN_DIR $\{CMAKE_INSTALL_PREFIX\}/bin)
+endif()
+
+if(NOT CHIMAERA_INSTALL_LIB_DIR)
+  set(CHIMAERA_INSTALL_LIB_DIR $\{CMAKE_INSTALL_PREFIX\}/lib)
+endif()
+
+if(NOT CHIMAERA_INSTALL_INCLUDE_DIR)
+  set(CHIMAERA_INSTALL_INCLUDE_DIR $\{CMAKE_INSTALL_PREFIX\}/include)
+endif()
+
+if(NOT CHIMAERA_INSTALL_DATA_DIR)
+  set(CHIMAERA_INSTALL_DATA_DIR $\{CMAKE_INSTALL_PREFIX\}/share)
+endif()
+
+if (NOT CHIMAERA_EXPORTED_TARGETS)
+  set(CHIMAERA_EXPORTED_TARGETS {namespace}_exports)
+endif()
+
+# ADD SUBDIRECTORIES
+{subdirs}
+
+# INSTALL TARGETS
+if (NOT CHIMAERA_IS_MAIN_PROJECT)
+  install(EXPORT ${CHIMAERA_EXPORTED_TARGETS}
+          FILE ${CHIMAERA_EXPORTED_TARGETS}Config.cmake
+          NAMESPACE ${MOD_NAMESPACE}::
+          DESTINATION cmake
+   )
+endif()
+"""
+
 
 class ChimaeraCodegen:
     def make_macro(self, PATH):
@@ -74,7 +118,28 @@ class ChimaeraCodegen:
         with open(config_path, 'w') as fp:
             fp.write(config)
 
-    def make_task(self, MOD_ROOT):
+    def make_repo(self, MOD_REPO_DIR, namespace):
+        """
+        Creates a chimaera module repository.
+        """
+        MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        os.makedirs(MOD_REPO_DIR, exist_ok=True)
+        repo_conf = {'namespace': namespace}
+        self.save_repo_config(MOD_REPO_DIR, repo_conf)
+        self.refresh_repo_cmake(MOD_REPO_DIR, namespace)
+        print(f'Created module repository at {MOD_REPO_DIR}')
+
+    def load_repo_config(self, MOD_REPO_DIR):
+        MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        with open(f'{MOD_REPO_DIR}/chimaera_repo.yaml') as fp:
+            config = yaml.load(fp, Loader=yaml.FullLoader)
+        return config
+
+    def save_repo_config(self, MOD_REPO_DIR, repo_conf):
+        with open(f'{MOD_REPO_DIR}/chimaera_repo.yaml', 'w') as fp:
+            yaml.dump(repo_conf, fp)
+
+    def make_mod(self, MOD_ROOT):
         """
         Bootstraps a task. Copies all the necessary files and replaces. This
         is an aggressive operation.
@@ -109,6 +174,10 @@ class ChimaeraCodegen:
         with open(f'{MOD_ROOT}/{rel_path}', 'w') as fp:
             fp.write(text)
 
+    def refresh_repo(self, MOD_REPO_DIR):
+        self.refresh_repo_methods(MOD_REPO_DIR)
+        self.refresh_repo_cmake(MOD_REPO_DIR)
+
     def refresh_repo_methods(self, MOD_REPO_DIR):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
         MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
@@ -120,27 +189,21 @@ class ChimaeraCodegen:
             except Exception as e:
                 print(e)
                 pass
-        # Refresh the module repo cmake
-        self.refresh_repo_cmake(MOD_REPO_DIR)
 
-    def refresh_repo_cmake(self, MOD_REPO_DIR):
+    def refresh_repo_cmake(self, MOD_REPO_DIR, namespace=None):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        if namespace is None:
+            repo_conf = self.load_repo_config(MOD_REPO_DIR)
+            namespace = repo_conf['namespace']
         # Refresh all methods
         MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR) 
                      if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')]
-        MOD_NAMES = sorted(MOD_NAMES)
-        lines = []
-        lines.append('cmake_minimum_required(VERSION 3.25)')
-        lines.append('project(chimaera_modules)')
-        lines.append('if (NOT CHIMAERA_IS_MAIN_PROJECT)')
-        lines.append('  find_package(Chimaera CONFIG REQUIRED)')
-        lines.append('endif()')
-        lines.append('')
-        for MOD_NAME in MOD_NAMES:
-            lines.append(f'add_subdirectory({MOD_NAME})')
+        MOD_NAMES = sorted(MOD_NAMES) 
+        subdirs = '\n'.join([f'add_subdirectory({MOD_NAME})' 
+                             for MOD_NAME in MOD_NAMES])
+        repo_cmake = BASE_REPO_CMAKE.format(namespace=namespace, subdirs=subdirs)
         with open(f'{MOD_REPO_DIR}/CMakeLists.txt', 'w') as fp:
-            fp.write('\n'.join(lines))
-
+            fp.write(repo_cmake)
 
     def refresh_methods(self, MOD_ROOT):
         """
