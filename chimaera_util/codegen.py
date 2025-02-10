@@ -7,6 +7,7 @@ import sys
 import yaml
 from chimaera_util.util.templates import task_template, client_method_template, runtime_method_template
 from chimaera_util.util.paths import CHIMAERA_TASK_TEMPL
+from chimaera_util.util.naming import to_camel_case
 
 BASE_REPO_CMAKE = """
 cmake_minimum_required(VERSION 3.25)
@@ -20,23 +21,23 @@ endif()
 
 # SET INSTALL VARIABLES
 if(NOT CHIMAERA_INSTALL_BIN_DIR)
-  set(CHIMAERA_INSTALL_BIN_DIR $\{CMAKE_INSTALL_PREFIX\}/bin)
+  set(CHIMAERA_INSTALL_BIN_DIR ${{CMAKE_INSTALL_PREFIX}}/bin)
 endif()
 
 if(NOT CHIMAERA_INSTALL_LIB_DIR)
-  set(CHIMAERA_INSTALL_LIB_DIR $\{CMAKE_INSTALL_PREFIX\}/lib)
+  set(CHIMAERA_INSTALL_LIB_DIR ${{CMAKE_INSTALL_PREFIX}}/lib)
 endif()
 
 if(NOT CHIMAERA_INSTALL_INCLUDE_DIR)
-  set(CHIMAERA_INSTALL_INCLUDE_DIR $\{CMAKE_INSTALL_PREFIX\}/include)
+  set(CHIMAERA_INSTALL_INCLUDE_DIR ${{CMAKE_INSTALL_PREFIX}}/include)
 endif()
 
 if(NOT CHIMAERA_INSTALL_DATA_DIR)
-  set(CHIMAERA_INSTALL_DATA_DIR $\{CMAKE_INSTALL_PREFIX\}/share)
+  set(CHIMAERA_INSTALL_DATA_DIR ${{CMAKE_INSTALL_PREFIX}}/share)
 endif()
 
 if (NOT CHIMAERA_EXPORTED_TARGETS)
-  set(CHIMAERA_EXPORTED_TARGETS {namespace}_exports)
+  set(CHIMAERA_EXPORTED_TARGETS {camel_ns})
 endif()
 
 # ADD SUBDIRECTORIES
@@ -44,9 +45,9 @@ endif()
 
 # INSTALL TARGETS
 if (NOT CHIMAERA_IS_MAIN_PROJECT)
-  install(EXPORT ${CHIMAERA_EXPORTED_TARGETS}
-          FILE ${CHIMAERA_EXPORTED_TARGETS}Config.cmake
-          NAMESPACE ${MOD_NAMESPACE}::
+  install(EXPORT ${{CHIMAERA_EXPORTED_TARGETS}}
+          FILE ${{CHIMAERA_EXPORTED_TARGETS}}Config.cmake
+          NAMESPACE {namespace}::
           DESTINATION cmake
    )
 endif()
@@ -153,6 +154,7 @@ class ChimaeraCodegen:
         os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
         os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'CMakeLists.txt', TASK_NAME)
+        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'chimaera_mod.yaml', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/CMakeLists.txt', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME.cc', TASK_NAME)
         self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME_monitor.py', TASK_NAME)
@@ -195,13 +197,14 @@ class ChimaeraCodegen:
         if namespace is None:
             repo_conf = self.load_repo_config(MOD_REPO_DIR)
             namespace = repo_conf['namespace']
-        # Refresh all methods
+        camel_ns = to_camel_case(namespace) 
         MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR) 
-                     if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')]
+                     if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')
+                     and os.path.exists(f'{MOD_REPO_DIR}/{MOD_NAME}/')]
         MOD_NAMES = sorted(MOD_NAMES) 
         subdirs = '\n'.join([f'add_subdirectory({MOD_NAME})' 
                              for MOD_NAME in MOD_NAMES])
-        repo_cmake = BASE_REPO_CMAKE.format(namespace=namespace, subdirs=subdirs)
+        repo_cmake = BASE_REPO_CMAKE.format(namespace=namespace, subdirs=subdirs, camel_ns=camel_ns)
         with open(f'{MOD_REPO_DIR}/CMakeLists.txt', 'w') as fp:
             fp.write(repo_cmake)
 
