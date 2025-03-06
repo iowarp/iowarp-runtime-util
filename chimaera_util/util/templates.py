@@ -53,7 +53,6 @@ CHI_TASK_METHODS(##method_name##);
 runtime_method_template = """
   /** The ##method_name## method */
   void ##method_name##(##task_name## *task, RunContext &rctx) {
-    task->SetModuleComplete();
   }
   void Monitor##method_name##(MonitorModeId mode, ##task_name## *task, RunContext &rctx) {
     switch (mode) {
