@@ -40,7 +40,7 @@ struct ##task_name## : public Task, TaskFlags<TF_SRL_SYM> {
 
 client_method_template = """
 /** ##method_name## task */
-void ##method_name##(const hipc::CtxAllocator<CHI_ALLOC_T> &alloc,
+void ##method_name##(const hipc::MemContext &mctx,
                      const DomainQuery &dom_query) {
   FullPtr<##task_name##> task =
     Async##method_name##(dom_query);
