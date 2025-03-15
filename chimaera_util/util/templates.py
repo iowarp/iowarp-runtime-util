@@ -43,7 +43,7 @@ client_method_template = """
 void ##method_name##(const hipc::MemContext &mctx,
                      const DomainQuery &dom_query) {
   FullPtr<##task_name##> task =
-    Async##method_name##(dom_query);
+    Async##method_name##(mctx, dom_query);
   task->Wait();
   CHI_CLIENT->DelTask(mctx, task);
 }
