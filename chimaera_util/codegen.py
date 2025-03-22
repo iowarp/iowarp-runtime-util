@@ -153,16 +153,17 @@ class ChimaeraCodegen:
                 sys.exit(0)
         os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
         os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'CMakeLists.txt', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'chimaera_mod.yaml', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/CMakeLists.txt', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME.cc', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'src/TASK_NAME_monitor.py', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME.h', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_lib_exec.h', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_tasks.h', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_methods.h', TASK_NAME)
-        self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, 'include/TASK_NAME/TASK_NAME_methods.yaml', TASK_NAME)
+        self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, '')
+
+    def _copy_replace_iter(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, rel_path):
+        for name in os.listdir(f"{CHIMAERA_TASK_TEMPL}/{rel_path}"):
+            # Copy and replace files
+            if os.path.isfile(f"{CHIMAERA_TASK_TEMPL}/{rel_path}/{name}"):
+                rel_file_path = os.path.join(rel_path, name)
+                self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_file_path, TASK_NAME)
+            # Recurse
+            elif os.path.isdir(f"{CHIMAERA_TASK_TEMPL}/{rel_path}/{name}"):
+                self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, os.path.join(rel_path, name))
 
     def _copy_replace(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_path, TASK_NAME):
         """
