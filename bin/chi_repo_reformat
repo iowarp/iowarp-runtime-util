@@ -22,20 +22,43 @@ class RepoReformat:
 
                 # Process each subdirectory that has chimaera_mod.yaml
                 print(f"Processing directory: {full_path}")
-                
+                mod_name = subdir
+                self.reformat_mod(mod_name, full_path)
+    
+    def reformat_mod(self, mod_name, mod_root):
+        self.reformat_TASK_NAME_cc(mod_name, mod_root)
+        self.reformat_TASK_NAME_h(mod_name, mod_root)
+        self.reformat_src_cmake(mod_name, mod_root)
+        self.touch_src_client(mod_name, mod_root)
+        src_dir = os.path.join(mod_root, "src")
+        if os.path.exists(src_dir):
+            for filename in os.listdir(src_dir):
+                if os.path.isfile(os.path.join(src_dir, filename)):
+                    self.reformat_file(mod_name, mod_root, f"src/{filename}")
+        include_dir = os.path.join(mod_root, "include")
+        if os.path.exists(include_dir):
+            for filename in os.listdir(include_dir):
+                if os.path.isfile(os.path.join(include_dir, filename)):
+                    self.reformat_file(mod_name, mod_root, f"include/{filename}")
+
     def reformat_TASK_NAME_cc(self, mod_name, mod_root):
-        src_path = os.path.join(mod_root, f"{mod_name}.cc")
-        dst_path = os.path.join(mod_root, f"{mod_name}_runtime.cc")
+        src_path = os.path.join(mod_root, "src", f"{mod_name}.cc")
+        dst_path = os.path.join(mod_root, "src", f"{mod_name}_runtime.cc")
         if os.path.exists(src_path):
             os.rename(src_path, dst_path)
             print(f"Moved {src_path} to {dst_path}")
+        else:
+            print(f"File not found: {src_path}")
     
     def reformat_TASK_NAME_h(self, mod_name, mod_root):
-        src_path = os.path.join(mod_root, f"{mod_name}.h")
-        dst_path = os.path.join(mod_root, f"{mod_name}_client.h")
+        src_path = os.path.join(mod_root, "include", mod_name, f"{mod_name}.h")
+        dst_path = os.path.join(mod_root, "include", mod_name, f"{mod_name}_client.h")
+        print(src_path)
         if os.path.exists(src_path):
             os.rename(src_path, dst_path)
             print(f"Moved {src_path} to {dst_path}")
+        else:
+            print(f"File not found: {src_path}")
 
     def reformat_file(self, mod_name, mod_root, relpath):
         with open(os.path.join(mod_root, relpath), 'r') as f:
@@ -55,16 +78,23 @@ class RepoReformat:
             with open(cmake_path, 'r') as src, open(backup_path, 'w') as dst:
                 dst.write(src.read())
             print(f"Created backup: {backup_path}")
-        self.reformat_file(mod_name, mod_root, "src/CMakeLists.txt")
         with open(cmake_path, 'r') as f:
             content = f.read()
-        content = content.replace("add_chimod_library", "add_chimod_runtime_lib")
-        content = content.replace("add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + ".cc)",
+        
+        print(f"add_chimod_library(${{MOD_NAMESPACE}} {mod_name} {mod_name}.cc)")
+        content = content.replace(f"add_chimod_library(${{MOD_NAMESPACE}} {mod_name} {mod_name}.cc)",
                     "add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_runtime.cc)\n" + 
                     "add_chimod_client_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_client.cc)")
         with open(cmake_path, 'w') as f:
             f.write(content)
         print("Updated CMake library function name")
+
+    def touch_src_client(self, mod_name, mod_root):
+        client_path = os.path.join(mod_root, "src", f"{mod_name}_client.cc")
+        if not os.path.exists(client_path):
+            with open(client_path, 'w') as f:
+                f.write(f'#include "{mod_name}/{mod_name}_client.h"\n')
+            print(f"Created {client_path}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

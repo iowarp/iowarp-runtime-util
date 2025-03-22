@@ -231,8 +231,8 @@ class ChimaeraCodegen:
         self.LIB_EXEC_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_lib_exec.h'
         self.LIB_EXEC_MACRO = f'CHI_{MOD_NAME.upper()}_LIB_EXEC_H_'
         self.NEW_TASKS_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h'
-        self.NEW_CLIENT_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h'
-        self.NEW_RUNTIME_CC = f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc'
+        self.NEW_CLIENT_H = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_client.temp_h'
+        self.NEW_RUNTIME_CC = f'{MOD_ROOT}/src/{MOD_NAME}_runtime.temp_cc'
 
         # Refresh the files
         self.refresh_methods_h(methods)
@@ -471,9 +471,17 @@ class ChimaeraCodegen:
         if not os.path.exists(f'{MOD_ROOT}/include'):
             return
         MOD_NAME = os.path.basename(MOD_ROOT)
-        os.remove(f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h')
-        os.remove(f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h')
-        os.remove(f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc')
+        for file_path in [
+            f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_tasks.temp_h',
+            f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_client.temp_h',
+            f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h',
+            f'{MOD_ROOT}/src/{MOD_NAME}_runtime.temp_cc',
+            f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc'
+        ]:
+            try:
+                os.remove(file_path)
+            except FileNotFoundError:
+                pass
 
     def tmpl(self, tmpl_str, task_name, method_name, method_enum_name):
         return tmpl_str.replace('##task_name##', task_name) \
