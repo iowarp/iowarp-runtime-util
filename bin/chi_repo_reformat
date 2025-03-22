@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+
+"""
+USAGE: chi_repo_reformat <repo_path>
+"""
+
+class RepoReformat:
+    def __init__(self, repo_path):
+        self.repo_path = repo_path
+        
+    def process(self):
+        for subdir in os.listdir(self.repo_path):
+            full_path = os.path.join(self.repo_path, subdir)
+            if os.path.isdir(full_path):
+                # Check if chimaera_mod.yaml exists
+                yaml_path = os.path.join(full_path, "chimaera_mod.yaml")
+                if not os.path.exists(yaml_path):
+                    continue
+
+                # Process each subdirectory that has chimaera_mod.yaml
+                print(f"Processing directory: {full_path}")
+                
+    def reformat_TASK_NAME_cc(self, mod_name, mod_root):
+        src_path = os.path.join(mod_root, f"{mod_name}.cc")
+        dst_path = os.path.join(mod_root, f"{mod_name}_runtime.cc")
+        if os.path.exists(src_path):
+            os.rename(src_path, dst_path)
+            print(f"Moved {src_path} to {dst_path}")
+    
+    def reformat_TASK_NAME_h(self, mod_name, mod_root):
+        src_path = os.path.join(mod_root, f"{mod_name}.h")
+        dst_path = os.path.join(mod_root, f"{mod_name}_client.h")
+        if os.path.exists(src_path):
+            os.rename(src_path, dst_path)
+            print(f"Moved {src_path} to {dst_path}")
+
+    def reformat_file(self, mod_name, mod_root, relpath):
+        with open(os.path.join(mod_root, relpath), 'r') as f:
+            content = f.read()
+        
+        content = content.replace(f"{mod_name}.h", f"{mod_name}_client.h")
+        content = content.replace(f"{mod_name}.cc", f"{mod_name}_runtime.cc")
+        
+        with open(os.path.join(mod_root, relpath), 'w') as f:
+            f.write(content)
+        print(f"Updated references in {relpath}")
+    
+    def reformat_src_cmake(self, mod_name, mod_root):
+        cmake_path = os.path.join(mod_root, "src/CMakeLists.txt")
+        if os.path.exists(cmake_path):
+            backup_path = os.path.join(mod_root, "src/CMakeLists.txt.backup")
+            with open(cmake_path, 'r') as src, open(backup_path, 'w') as dst:
+                dst.write(src.read())
+            print(f"Created backup: {backup_path}")
+        self.reformat_file(mod_name, mod_root, "src/CMakeLists.txt")
+        with open(cmake_path, 'r') as f:
+            content = f.read()
+        content = content.replace("add_chimod_library", "add_chimod_runtime_lib")
+        content = content.replace("add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + ".cc)",
+                    "add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_runtime.cc)\n" + 
+                    "add_chimod_client_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_client.cc)")
+        with open(cmake_path, 'w') as f:
+            f.write(content)
+        print("Updated CMake library function name")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Invalid number of arguments")
+        print(__doc__)
+        sys.exit(1)
+
+    repo_path = sys.argv[1]
+    if not os.path.exists(repo_path):
+        print(f"Invalid path: {repo_path}")
+        sys.exit(1)
+
+    reformat = RepoReformat(repo_path)
+    reformat.process()
+    print("Done")
+    sys.exit(0)
