@@ -476,7 +476,8 @@ class ChimaeraCodegen:
             f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_client.temp_h',
             f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}.temp_h',
             f'{MOD_ROOT}/src/{MOD_NAME}_runtime.temp_cc',
-            f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc'
+            f'{MOD_ROOT}/src/{MOD_NAME}.temp_cc',
+            f'{MOD_ROOT}/src/CMakeLists.txt.backup',
         ]:
             try:
                 os.remove(file_path)
