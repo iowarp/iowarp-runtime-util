@@ -270,13 +270,12 @@ class ChimaeraCodegen:
         self.load_method_defs()
         try:
             with open(self.COMPILED_METHODS_YAML) as fp:
-                methods = yaml.load(fp, Loader=yaml.FullLoader)
+                self.methods = yaml.load(fp, Loader=yaml.FullLoader)
         except:
-            methods = None
-        if methods is None:
-            methods = self.scan_compiled_tasks()
+            self.methods = None
+        if self.methods is None:
+            self.methods = self.scan_compiled_tasks()
         self.mark_new_methods_uncompiled()
-        return methods
 
     def refresh_methods(self, MOD_ROOT):
         """
@@ -325,7 +324,7 @@ class ChimaeraCodegen:
             if method_off < 10:
                 continue
             lines += [f'  TASK_METHOD_T {method_enum_name} = {method_off};']
-        last_method_id = self.methods[-1][1]['val']
+        last_method_id = self.sorted_methods[-1][1]['val']
         lines += [f'  TASK_METHOD_T kCount = {last_method_id + 1};']
         lines += ['};', '', f'#endif  // {self.METHOD_MACRO}']
         with open(self.METHODS_H, 'w') as fp:
