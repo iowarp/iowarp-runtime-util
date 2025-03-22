@@ -216,9 +216,9 @@ class ChimaeraCodegen:
             method_defs = yaml.load(fp, Loader=yaml.FullLoader)
         if method_defs is None:
             method_defs = {}
-        return method_defs
+        self.method_defs = method_defs
 
-    def scan_compiled_tasks(self, method_defs):
+    def scan_compiled_tasks(self):
         methods = {}
         if os.path.exists(self.OLD_TASKS_H):
             with open(self.OLD_TASKS_H) as fp:
@@ -227,44 +227,55 @@ class ChimaeraCodegen:
                     if not match:
                         continue
                     task_name = match.group(1)
-                    if task_name not in method_defs:
+                    method_name = f'k{task_name}'
+                    if method_name not in self.method_defs:
                         continue
-                    method_id = f'k{task_name}'
-                    method_off = method_defs[task_name]
-                    methods[method_id] = {
+                    method_off = self.method_defs[method_name]
+                    methods[method_name] = {
                         'val': method_off,
                         'compiled': True
                     }
         return methods
 
-    def mark_new_methods_uncompiled(self, method_defs, methods):
-        for method_name, method_off in method_defs.items():
+    def mark_new_methods_uncompiled(self):
+        for method_name, method_off in self.method_defs.items():
                 if method_off < 0:
                     continue
                 if method_off <= 2:
                     # These are required methods
-                    methods[method_name] = True
+                    self.methods[method_name] = {
+                        'val': method_off,
+                        'compiled': True
+                    }
                 if method_off < 10:
                     # TODO(llogan): Allow bootstrapping special methods
                     continue
-                if method_name in methods:
+                if method_name in self.methods:
                     continue
-                methods[method_name] = {
+                self.methods[method_name] = {
                     'val': method_off,
                     'compiled': False
                 }
 
-    def save_method_compile_staus(self, methods):
+    def save_method_compile_staus(self):
+        lines = []
+        for method in self.sorted_methods:
+            method_name = method[0]
+            method_info = method[1]
+            lines.append(f'{method_name}: {method_info}')
         with open(self.COMPILED_METHODS_YAML, 'w') as fp:
-            yaml.dump(methods, fp)
+            fp.write('\n'.join(lines))
 
     def get_method_compile_status(self):
-        method_defs = self.load_method_defs()
-        with open(self.COMPILED_METHODS_YAML) as fp:
-            methods = yaml.load(fp, Loader=yaml.FullLoader)
+        self.load_method_defs()
+        try:
+            with open(self.COMPILED_METHODS_YAML) as fp:
+                methods = yaml.load(fp, Loader=yaml.FullLoader)
+        except:
+            methods = None
         if methods is None:
-            methods = self.scan_compiled_tasks(method_defs)
-        self.mark_new_methods_uncompiled(method_defs, methods)
+            methods = self.scan_compiled_tasks()
+        self.mark_new_methods_uncompiled()
         return methods
 
     def refresh_methods(self, MOD_ROOT):
@@ -289,37 +300,38 @@ class ChimaeraCodegen:
         self.NEW_RUNTIME_CC = f'{MOD_ROOT}/src/{MOD_NAME}_runtime.temp_cc'
 
         # Load methods and their compiled status
-        methods = self.get_method_compile_status() 
-        methods = sorted(methods.items(), key=lambda x: x[1]['val'])
+        self.get_method_compile_status() 
+        self.sorted_methods = sorted(self.methods.items(), key=lambda x: x[1]['val'])
 
         # Refresh the files
-        self.refresh_methods_h(methods)
-        self.refresh_lib_exec_h(methods)
-        self.refresh_tasks_h(methods)
-        self.refresh_client_h(methods)
-        self.refresh_runtime_cc(methods)
+        self.refresh_methods_h()
+        self.refresh_lib_exec_h()
+        self.refresh_tasks_h()
+        self.refresh_client_h()
+        self.refresh_runtime_cc()
 
         # Save compiled methods
-        self.save_method_compile_staus(methods)
+        self.save_method_compile_staus()
 
-    def refresh_methods_h(self, methods):
+    def refresh_methods_h(self):
         lines = []
         lines += [f'#ifndef {self.METHOD_MACRO}',
                   f'#define {self.METHOD_MACRO}',
                   '',
                   '/** The set of methods in the admin task */',
                   'struct Method : public TaskMethod {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 10:
                 continue
             lines += [f'  TASK_METHOD_T {method_enum_name} = {method_off};']
-        lines += [f'  TASK_METHOD_T kCount = {methods[-1][1] + 1};']
+        last_method_id = self.methods[-1][1]['val']
+        lines += [f'  TASK_METHOD_T kCount = {last_method_id + 1};']
         lines += ['};', '', f'#endif  // {self.METHOD_MACRO}']
         with open(self.METHODS_H, 'w') as fp:
             fp.write('\n'.join(lines))
 
-    def refresh_lib_exec_h(self, methods):
+    def refresh_lib_exec_h(self):
         # Produce the MOD_NAME_lib_exec.h file
         lines = []
         lines += [f'#ifndef {self.LIB_EXEC_MACRO}',
@@ -329,7 +341,7 @@ class ChimaeraCodegen:
         lines += ['/** Execute a task */',
                   'void Run(u32 method, Task *task, RunContext &rctx) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -346,7 +358,7 @@ class ChimaeraCodegen:
         lines += ['/** Execute a task */',
                   'void Monitor(MonitorModeId mode, MethodId method, Task *task, RunContext &rctx) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -363,7 +375,7 @@ class ChimaeraCodegen:
         lines += ['/** Delete a task */',
                   'void Del(const hipc::MemContext &mctx, u32 method, Task *task) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -380,7 +392,7 @@ class ChimaeraCodegen:
         lines += ['/** Duplicate a task */',
                   'void CopyStart(u32 method, const Task *orig_task, Task *dup_task, bool deep) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -399,7 +411,7 @@ class ChimaeraCodegen:
         lines += ['/** Duplicate a task */',
                   'void NewCopyStart(u32 method, const Task *orig_task, FullPtr<Task> &dup_task, bool deep) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -419,7 +431,7 @@ class ChimaeraCodegen:
                   '    u32 method, BinaryOutputArchive<true> &ar,',
                   '    Task *task) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -439,7 +451,7 @@ class ChimaeraCodegen:
                   '    u32 method, BinaryInputArchive<true> &ar) override {',
                   '  TaskPointer task_ptr;',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -459,7 +471,7 @@ class ChimaeraCodegen:
         lines += ['/** Serialize a task when returning from remote queue */',
                   'void SaveEnd(u32 method, BinaryOutputArchive<false> &ar, Task *task) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -476,7 +488,7 @@ class ChimaeraCodegen:
         lines += ['/** Deserialize a task when popping from remote queue */',
                   'void LoadEnd(u32 method, BinaryInputArchive<false> &ar, Task *task) override {',
                   '  switch (method) {']
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue
@@ -496,35 +508,35 @@ class ChimaeraCodegen:
         with open(self.LIB_EXEC_H, 'w') as fp:
             fp.write('\n'.join(lines))
 
-    def refresh_tasks_h(self, methods):
+    def refresh_tasks_h(self):
         self.refresh_method_try_modes(
-            methods, self.OLD_TASKS_H, 
+            self.OLD_TASKS_H, 
             self.NEW_TASKS_H, task_template)
 
-    def refresh_client_h(self, methods):
+    def refresh_client_h(self):
         self.refresh_method_try_modes(
-            methods, self.OLD_CLIENT_H, 
+            self.OLD_CLIENT_H, 
             self.NEW_CLIENT_H, client_method_template)
 
-    def refresh_runtime_cc(self, methods):
+    def refresh_runtime_cc(self):
         self.refresh_method_try_modes(
-            methods, self.OLD_RUNTIME_CC, 
+            self.OLD_RUNTIME_CC, 
             self.NEW_RUNTIME_CC, runtime_method_template)
 
-    def refresh_method_try_modes(self, methods, orig_path, new_path, tmpl_name):
-        self.refresh_insert(methods, orig_path, tmpl_name)
-        ret = self.refresh_append(methods, orig_path, tmpl_name)
+    def refresh_method_try_modes(self, orig_path, new_path, tmpl_name):
+        self.refresh_insert(orig_path, tmpl_name)
+        ret = self.refresh_append(orig_path, tmpl_name)
         if not ret:
-            self.refresh_tmpfile(methods, new_path, tmpl_name)
+            self.refresh_tmpfile(new_path, tmpl_name)
 
-    def refresh_insert(self, methods, orig_path, tmpl_name):
+    def refresh_insert(self, orig_path, tmpl_name):
         """
         Inserts non-compiled methods into the runtime
         file at the ideal location
         """
         with open(self.OLD_RUNTIME_CC) as fp:
             content = fp.read()
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0 or method_info['compiled']:
                 continue
@@ -543,7 +555,7 @@ class ChimaeraCodegen:
             with open(self.OLD_RUNTIME_CC, 'w') as fp:
                 fp.write(content)
         
-    def refresh_append(self, methods, orig_path, tmpl_name):
+    def refresh_append(self, orig_path, tmpl_name):
         """
         Appends non-compiled methods to the end of the
         runtime and marks them compiled
@@ -557,7 +569,7 @@ class ChimaeraCodegen:
         if start_idx == -1:
             return False
         lines = []
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0 or method_info['compiled']:
                 continue
@@ -573,13 +585,13 @@ class ChimaeraCodegen:
             fp.write(content)
         return True
 
-    def refresh_tmpfile(self, methods, new_path, tmpl_name):
+    def refresh_tmpfile(self, new_path, tmpl_name):
         """
         Generates a temporary file with new runtime methods
         to copy-paste from.
         """
         lines = []
-        for method_enum_name, method_info in methods:
+        for method_enum_name, method_info in self.sorted_methods:
             method_off = method_info['val']
             if method_off < 0:
                 continue

@@ -1,4 +1,5 @@
 task_template = """
+CHI_BEGIN(##method_name##)
 /** The ##task_name## task */
 struct ##task_name## : public Task, TaskFlags<TF_SRL_SYM> {
   /** SHM default constructor */
@@ -36,9 +37,11 @@ struct ##task_name## : public Task, TaskFlags<TF_SRL_SYM> {
   void SerializeEnd(Ar &ar) {
   }
 };
+CHI_END(##method_name##);
 """
 
 client_method_template = """
+CHI_BEGIN(##method_name##)
 /** ##method_name## task */
 void ##method_name##(const hipc::MemContext &mctx,
                      const DomainQuery &dom_query) {
@@ -48,9 +51,11 @@ void ##method_name##(const hipc::MemContext &mctx,
   CHI_CLIENT->DelTask(mctx, task);
 }
 CHI_TASK_METHODS(##method_name##);
+CHI_END(##method_name##)
 """
 
 runtime_method_template = """
+  CHI_BEGIN(##method_name##)
   /** The ##method_name## method */
   void ##method_name##(##task_name## *task, RunContext &rctx) {
   }
@@ -61,4 +66,5 @@ runtime_method_template = """
       }
     }
   }
+  CHI_END(##method_name##)
 """
