@@ -636,7 +636,7 @@ class ChimaeraCodegen:
         if 'CHI_AUTOGEN_METHODS' not in self.chi_ends:
             return False
         start_line = self.chi_ends['CHI_AUTOGEN_METHODS']
-        self.content.insert(start_line, tmpl + '\n\n')
+        self.content.insert(start_line, tmpl + '\n')
         self.chi_ends[self.method_name] = start_line
         self.method_info['compiled_tmp'] = True
         return True
