@@ -38,20 +38,22 @@ struct ##task_name## : public Task, TaskFlags<TF_SRL_SYM> {
   }
 };
 CHI_END(##method_name##);
+
 """
 
 client_method_template = """
-CHI_BEGIN(##method_name##)
-/** ##method_name## task */
-void ##method_name##(const hipc::MemContext &mctx,
-                     const DomainQuery &dom_query) {
-  FullPtr<##task_name##> task =
-    Async##method_name##(mctx, dom_query);
-  task->Wait();
-  CHI_CLIENT->DelTask(mctx, task);
-}
-CHI_TASK_METHODS(##method_name##);
-CHI_END(##method_name##)
+  CHI_BEGIN(##method_name##)
+  /** ##method_name## task */
+  void ##method_name##(const hipc::MemContext &mctx,
+                      const DomainQuery &dom_query) {
+    FullPtr<##task_name##> task =
+      Async##method_name##(mctx, dom_query);
+    task->Wait();
+    CHI_CLIENT->DelTask(mctx, task);
+  }
+  CHI_TASK_METHODS(##method_name##);
+  CHI_END(##method_name##)
+
 """
 
 runtime_method_template = """
@@ -67,4 +69,5 @@ runtime_method_template = """
     }
   }
   CHI_END(##method_name##)
+  
 """

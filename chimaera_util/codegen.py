@@ -262,6 +262,11 @@ class ChimaeraCodegen:
         for method in self.sorted_methods:
             method_name = method[0]
             method_info = method[1]
+            if 'compiled_tmp' in method_info:
+                method_info['compiled'] = method_info['compiled_tmp']
+                del method_info['compiled_tmp']
+            if 'inserted' in method_info:
+                del method_info['inserted']
             lines.append(f'{method_name}: {method_info}')
         with open(self.COMPILED_METHODS_YAML, 'w') as fp:
             fp.write('\n'.join(lines))
@@ -523,65 +528,117 @@ class ChimaeraCodegen:
             self.NEW_RUNTIME_CC, runtime_method_template)
 
     def refresh_method_try_modes(self, orig_path, new_path, tmpl_name):
-        self.refresh_insert(orig_path, tmpl_name)
-        ret = self.refresh_append(orig_path, tmpl_name)
-        if not ret:
+        with open(orig_path) as fp:
+            self.content = fp.readlines()
+        self.tmpl_name = tmpl_name
+        did_edits = False
+
+        # Insert based on macros
+        self.chi_ends = self.get_chi_end_map(self.content)
+        self.pending_chi_ends = {}
+        self.sorted_off = -1
+        for method_enum_name, method_info in self.sorted_methods:
+            self.sorted_off += 1
+            self.method_enum_name = method_enum_name
+            self.method_info = method_info
+            self.method_name = method_enum_name.replace('k', '', 1)
+            self.task_name = self.method_name + "Task"
+            if self.refresh_insert():
+                did_edits = True
+                continue
+            if self.refresh_append():
+                did_edits = True
+                continue
+
+        # Write edited data
+        if did_edits:
+            self.refresh_insert_commit()
+            with open(orig_path, 'w') as fp:
+                fp.write(''.join(self.content))
+        else:
             self.refresh_tmpfile(new_path, tmpl_name)
 
-    def refresh_insert(self, orig_path, tmpl_name):
+    def get_method_name(self, sorted_off):
+        method_enum_name = self.sorted_methods[sorted_off][0]
+        method_name = method_enum_name.replace('k', '', 1)
+        return method_name
+    
+    def get_chi_end_map(self, content):
+        """Find lines with CHI_END macro and map method_name to line number"""
+        chi_end_pattern = r'CHI_END\((.*?)\)'
+        method_map = {}
+        for i, line in enumerate(content):
+            match = re.search(chi_end_pattern, line)
+            if match:
+                method_name = match.group(1)
+                method_map[method_name] = i
+                continue
+            match = 'CHI_AUTOGEN_METHODS' in line
+            if match:
+                method_map['CHI_AUTOGEN_METHODS'] = i
+        return method_map
+
+    def refresh_insert_commit(self):
+        # Sort pending chi ends by insert position in descending order 
+        sorted_pending = sorted(self.pending_chi_ends.values(), 
+                               key=lambda x: x['insert'],
+                               reverse=True)
+
+        # Insert templates at sorted positions
+        for info in sorted_pending:
+            start_line = info['insert'] 
+            if start_line == -100:
+                break
+            tmpls = info['tmpl']
+            self.content = self.content[0:start_line] + tmpls + self.content[start_line:]
+
+    def refresh_insert(self):
         """
         Inserts non-compiled methods into the runtime
         file at the ideal location
         """
-        with open(self.OLD_RUNTIME_CC) as fp:
-            content = fp.read()
-        for method_enum_name, method_info in self.sorted_methods:
-            method_off = method_info['val']
-            if method_off < 0 or method_info['compiled']:
-                continue
-            method_name = method_enum_name.replace('k', '', 1)
-            task_name = method_name + "Task"
-            tmpl = self.tmpl(tmpl_name, task_name, method_name, method_enum_name)
-            method_info['compiled'] = True
-            # Find CHI_END tag to insert before
-            start_idx = content.find(f'CHI_END({method_name})')
-            if start_idx == -1:
-                continue
-            # Insert 2 newlines after the template
-            content = content[:start_idx] + tmpl + '\n\n' + content[start_idx:]
-        with open(orig_path) as fp:
-            content = fp.read()
-            with open(self.OLD_RUNTIME_CC, 'w') as fp:
-                fp.write(content)
+        self.method_info['inserted'] = False
+        method_off = self.method_info['val']
+        if method_off < 0 or self.method_info['compiled']:
+            return False
+        tmpl = self.make_tmpl(self.tmpl_name, self.task_name, self.method_name, self.method_enum_name)
+        tmpl = '\n' + tmpl
+        # Find CHI_END tag to insert after
+        prior_method_name = self.get_method_name(self.sorted_off - 1)
+        if prior_method_name in self.chi_ends:
+            self.pending_chi_ends[self.method_name] = {
+                'insert': self.chi_ends[prior_method_name] + 1,
+                'tmpl': [tmpl],
+            }
+        elif prior_method_name in self.pending_chi_ends:
+            tmpls = self.pending_chi_ends[prior_method_name]['tmpl']
+            tmpls.append(tmpl)
+            self.pending_chi_ends[self.method_name] = {
+                'insert': -100,
+                'tmpl': tmpls,
+            }
+        else:
+            return False
+        self.method_info['compiled_tmp'] = True
+        self.method_info['inserted'] = True
+        return True
         
-    def refresh_append(self, orig_path, tmpl_name):
+    def refresh_append(self):
         """
         Appends non-compiled methods to the end of the
         runtime and marks them compiled
         """
-        # Open the file and read its contents
-        with open(self.OLD_RUNTIME_CC) as fp:
-            content = fp.read()
-        
-        # Find the autogen methods section
-        start_idx = content.find('CHI_AUTOGEN_METHODS')
-        if start_idx == -1:
+        method_off = self.method_info['val']
+        if method_off < 0 or self.method_info['compiled'] or self.method_info['inserted']:
             return False
-        lines = []
-        for method_enum_name, method_info in self.sorted_methods:
-            method_off = method_info['val']
-            if method_off < 0 or method_info['compiled']:
-                continue
-            method_name = method_enum_name.replace('k', '', 1)
-            task_name = method_name + "Task"
-            tmpl = self.tmpl(tmpl_name, task_name, method_name, method_enum_name)
-            lines += [tmpl]
-            method_info['compiled'] = True
-        
-        # Add newlines before autogen methods tag
-        content = content[:start_idx] + '\n'.join(lines) + '\n\n' + content[start_idx:]
-        with open(orig_path, 'w') as fp:
-            fp.write(content)
+        tmpl = self.make_tmpl(self.tmpl_name, self.task_name, self.method_name, self.method_enum_name)
+        # Find CHI_AUTOGEN_METHODS tag and insert before
+        if 'CHI_AUTOGEN_METHODS' not in self.chi_ends:
+            return False
+        start_line = self.chi_ends['CHI_AUTOGEN_METHODS']
+        self.content.insert(start_line, tmpl + '\n\n')
+        self.chi_ends[self.method_name] = start_line
+        self.method_info['compiled_tmp'] = True
         return True
 
     def refresh_tmpfile(self, new_path, tmpl_name):
@@ -596,10 +653,10 @@ class ChimaeraCodegen:
                 continue
             method_name = method_enum_name.replace('k', '', 1)
             task_name = method_name + "Task"
-            tmpl = self.tmpl(tmpl_name, task_name, method_name, method_enum_name)
+            tmpl = self.make_tmpl(tmpl_name, task_name, method_name, method_enum_name)
             lines += [tmpl]
         with open(new_path, 'w') as fp:
-            fp.write('\n'.join(lines))
+            fp.write(''.join(lines))
 
     def clear_autogen_temp(self, MOD_REPO_DIR):
         MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
@@ -627,7 +684,9 @@ class ChimaeraCodegen:
             except FileNotFoundError:
                 pass
 
-    def tmpl(self, tmpl_str, task_name, method_name, method_enum_name):
-        return tmpl_str.replace('##task_name##', task_name) \
+    def make_tmpl(self, tmpl_str, task_name, method_name, method_enum_name):
+        tmpl = tmpl_str.replace('##task_name##', task_name) \
             .replace('##method_name##', method_name) \
             .replace('##method_enum_name##', method_enum_name)
+        tmpl = tmpl.strip() + '\n'
+        return tmpl
