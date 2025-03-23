@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug chi_refresh_repo",
+            "type": "python",
+            "python": "/home/llogan/.venv/bin/python",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/chi_refresh_repo",
+            "args": ["/home/llogan/my_mod_repo"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
