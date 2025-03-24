@@ -6,8 +6,8 @@
             "type": "python",
             "python": "/home/llogan/.venv/bin/python",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/chi_refresh_repo",
-            "args": ["/home/llogan/my_mod_repo"],
+            "program": "${workspaceFolder}/bin/chi_repo_reformat",
+            "args": ["/home/llogan/Documents/Projects/iowarp/iowarp-runtime/tasks"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
