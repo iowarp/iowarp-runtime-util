@@ -84,7 +84,7 @@ class ChimaeraCodegen:
         os.makedirs(MOD_REPO_DIR, exist_ok=True)
         repo_conf = {'namespace': namespace}
         self.save_repo_config(MOD_REPO_DIR, repo_conf)
-        self.refresh_repo_cmake(MOD_REPO_DIR, namespace)
+        self.refresh_repo_cmake(MOD_REPO_DIR)
         print(f'Created module repository at {MOD_REPO_DIR}')
 
     def load_repo_config(self, MOD_REPO_DIR):
