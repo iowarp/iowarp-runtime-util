@@ -103,6 +103,8 @@ class ChimaeraCodegen:
         Bootstraps a task. Copies all the necessary files and replaces. This
         is an aggressive operation.
         """
+        MOD_REPO_DIR = os.path.dirname(MOD_ROOT)
+        self.load_repo_config(MOD_REPO_DIR)
         self.mod_name = os.path.basename(MOD_ROOT)
         if os.path.exists(f'{MOD_ROOT}/src'):
             ret = input('This task seems bootstrapped, do you really want to continue? (yes/no): ')

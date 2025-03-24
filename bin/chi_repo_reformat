@@ -24,7 +24,19 @@ class RepoReformat:
                 print(f"Processing directory: {full_path}")
                 mod_name = subdir
                 self.reformat_mod(mod_name, full_path)
+                self.reformat_repo_cmake()
     
+    def reformat_repo_cmake(self):
+        cmake_path = os.path.join(self.repo_path, "CMakeLists.txt")
+        if not os.path.exists(cmake_path): 
+            return
+        with open(cmake_path, 'r') as f:
+            content = f.read()
+        content = content.replace('MOD_NAMESPACE', 'REPO_NAMESPACE')
+        with open(cmake_path, 'w') as f:
+            f.write(content)
+        print(f'Updated {cmake_path}')
+
     def reformat_mod(self, mod_name, mod_root):
         self.reformat_MOD_NAME_cc(mod_name, mod_root)
         self.reformat_MOD_NAME_h(mod_name, mod_root)
@@ -85,6 +97,7 @@ class RepoReformat:
         content = content.replace(f"add_chimod_library(${{MOD_NAMESPACE}} {mod_name} {mod_name}.cc)",
                     "add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_runtime.cc)\n" + 
                     "add_chimod_client_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_client.cc)")
+        content = content.replace('MOD_NAMESPACE', 'REPO_NAMESPACE')
         with open(cmake_path, 'w') as f:
             f.write(content)
         print("Updated CMake library function name")
