@@ -71,3 +71,46 @@ runtime_method_template = """
   CHI_END(##method_name##)
   
 """
+
+
+BASE_REPO_CMAKE = """
+cmake_minimum_required(VERSION 3.25)
+project({namespace})
+set(MOD_NAMESPACE {namespace})
+
+# FIND CHIMAERA
+if (NOT CHIMAERA_IS_MAIN_PROJECT)
+  find_package(Chimaera CONFIG REQUIRED)
+endif()
+
+# SET INSTALL VARIABLES
+if(NOT CHIMAERA_INSTALL_BIN_DIR)
+  set(CHIMAERA_INSTALL_BIN_DIR ${{CMAKE_INSTALL_PREFIX}}/bin)
+endif()
+
+if(NOT CHIMAERA_INSTALL_LIB_DIR)
+  set(CHIMAERA_INSTALL_LIB_DIR ${{CMAKE_INSTALL_PREFIX}}/lib)
+endif()
+
+if(NOT CHIMAERA_INSTALL_INCLUDE_DIR)
+  set(CHIMAERA_INSTALL_INCLUDE_DIR ${{CMAKE_INSTALL_PREFIX}}/include)
+endif()
+
+if(NOT CHIMAERA_INSTALL_DATA_DIR)
+  set(CHIMAERA_INSTALL_DATA_DIR ${{CMAKE_INSTALL_PREFIX}}/share)
+endif()
+
+if (NOT CHIMAERA_EXPORTED_TARGETS)
+  set(CHIMAERA_EXPORTED_TARGETS {camel_ns})
+endif()
+
+# ADD SUBDIRECTORIES
+{subdirs}
+
+# INSTALL TARGETS
+install(EXPORT ${{CHIMAERA_EXPORTED_TARGETS}}
+        FILE ${{CHIMAERA_EXPORTED_TARGETS}}Config.cmake
+        NAMESPACE {namespace}::
+        DESTINATION cmake
+)
+"""
