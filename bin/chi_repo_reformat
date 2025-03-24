@@ -26,8 +26,8 @@ class RepoReformat:
                 self.reformat_mod(mod_name, full_path)
     
     def reformat_mod(self, mod_name, mod_root):
-        self.reformat_TASK_NAME_cc(mod_name, mod_root)
-        self.reformat_TASK_NAME_h(mod_name, mod_root)
+        self.reformat_MOD_NAME_cc(mod_name, mod_root)
+        self.reformat_MOD_NAME_h(mod_name, mod_root)
         self.reformat_src_cmake(mod_name, mod_root)
         self.touch_src_client(mod_name, mod_root)
         src_dir = os.path.join(mod_root, "src")
@@ -41,7 +41,7 @@ class RepoReformat:
                 if os.path.isfile(os.path.join(include_dir, filename)):
                     self.reformat_file(mod_name, mod_root, f"include/{filename}")
 
-    def reformat_TASK_NAME_cc(self, mod_name, mod_root):
+    def reformat_MOD_NAME_cc(self, mod_name, mod_root):
         src_path = os.path.join(mod_root, "src", f"{mod_name}.cc")
         dst_path = os.path.join(mod_root, "src", f"{mod_name}_runtime.cc")
         if os.path.exists(src_path):
@@ -50,7 +50,7 @@ class RepoReformat:
         else:
             print(f"File not found: {src_path}")
     
-    def reformat_TASK_NAME_h(self, mod_name, mod_root):
+    def reformat_MOD_NAME_h(self, mod_name, mod_root):
         src_path = os.path.join(mod_root, "include", mod_name, f"{mod_name}.h")
         dst_path = os.path.join(mod_root, "include", mod_name, f"{mod_name}_client.h")
         print(src_path)

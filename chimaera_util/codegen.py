@@ -80,6 +80,7 @@ class ChimaeraCodegen:
         Creates a chimaera module repository.
         """
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+        self.namespace = namespace
         os.makedirs(MOD_REPO_DIR, exist_ok=True)
         repo_conf = {'namespace': namespace}
         self.save_repo_config(MOD_REPO_DIR, repo_conf)
@@ -90,6 +91,7 @@ class ChimaeraCodegen:
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
         with open(f'{MOD_REPO_DIR}/chimaera_repo.yaml') as fp:
             config = yaml.load(fp, Loader=yaml.FullLoader)
+        self.namespace = config['namespace']
         return config
 
     def save_repo_config(self, MOD_REPO_DIR, repo_conf):
@@ -101,68 +103,67 @@ class ChimaeraCodegen:
         Bootstraps a task. Copies all the necessary files and replaces. This
         is an aggressive operation.
         """
-        TASK_NAME = os.path.basename(MOD_ROOT)
+        self.mod_name = os.path.basename(MOD_ROOT)
         if os.path.exists(f'{MOD_ROOT}/src'):
             ret = input('This task seems bootstrapped, do you really want to continue? (yes/no): ')
             if ret != 'yes':
                 print('Skipping...')
                 sys.exit(0)
         os.makedirs(f'{MOD_ROOT}/src', exist_ok=True)
-        os.makedirs(f'{MOD_ROOT}/include/{TASK_NAME}', exist_ok=True)
-        self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, '')
+        os.makedirs(f'{MOD_ROOT}/include/{self.mod_name}', exist_ok=True)
+        self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, '')
 
-    def _copy_replace_iter(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, rel_path):
+    def _copy_replace_iter(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_path):
         for name in os.listdir(f"{CHIMAERA_TASK_TEMPL}/{rel_path}"):
             # Copy and replace files
             if os.path.isfile(f"{CHIMAERA_TASK_TEMPL}/{rel_path}/{name}"):
                 rel_file_path = os.path.join(rel_path, name)
-                self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_file_path, TASK_NAME)
+                self._copy_replace(MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_file_path)
             # Recurse
             elif os.path.isdir(f"{CHIMAERA_TASK_TEMPL}/{rel_path}/{name}"):
-                self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, TASK_NAME, os.path.join(rel_path, name))
+                self._copy_replace_iter(MOD_ROOT, CHIMAERA_TASK_TEMPL, os.path.join(rel_path, name))
 
-    def _copy_replace(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_path, TASK_NAME):
+    def _copy_replace(self, MOD_ROOT, CHIMAERA_TASK_TEMPL, rel_path):
         """
         Copies a file from CHIMAERA_TASK_TEMPL to MOD_ROOT and renames
-        TASK_TEMPL to the value of TASK_NAME
+        TASK_TEMPL to the value of self.mod_name
         """
         with open(f'{CHIMAERA_TASK_TEMPL}/{rel_path}') as fp:
             text = fp.read()
-        text = text.replace('TASK_NAME', TASK_NAME)
-        rel_path = rel_path.replace('TASK_NAME', TASK_NAME)
+        text = text.replace('MOD_NAME', self.mod_name)
+        text = text.replace('chimaera_MOD_NAME', f'{self.namespace}_{self.mod_name}')
+        rel_path = rel_path.replace('MOD_NAME', self.mod_name)
         with open(f'{MOD_ROOT}/{rel_path}', 'w') as fp:
             fp.write(text)
 
     def refresh_repo(self, MOD_REPO_DIR):
         print(f'Refreshing repository at {MOD_REPO_DIR}')
-        self.refresh_repo_methods(MOD_REPO_DIR)
+        self.load_repo_config(MOD_REPO_DIR)
+        self.refresh_repo_mods(MOD_REPO_DIR)
         self.refresh_repo_cmake(MOD_REPO_DIR)
 
-    def refresh_repo_methods(self, MOD_REPO_DIR):
+    def refresh_repo_mods(self, MOD_REPO_DIR):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
         MOD_ROOTS = [os.path.join(MOD_REPO_DIR, item)
                       for item in os.listdir(MOD_REPO_DIR)]
         # Refresh all methods
         for MOD_ROOT in MOD_ROOTS:
             try:
-                self.refresh_methods(MOD_ROOT)
+                self.refresh_mod_tasks(MOD_ROOT)
             except Exception as e:
                 print(e)
                 pass
 
-    def refresh_repo_cmake(self, MOD_REPO_DIR, namespace=None):
+    def refresh_repo_cmake(self, MOD_REPO_DIR):
         MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
-        if namespace is None:
-            repo_conf = self.load_repo_config(MOD_REPO_DIR)
-            namespace = repo_conf['namespace']
-        camel_ns = to_camel_case(namespace) 
+        camel_ns = to_camel_case(self.namespace) 
         MOD_NAMES = [MOD_NAME for MOD_NAME in os.listdir(MOD_REPO_DIR) 
                      if os.path.isdir(f'{MOD_REPO_DIR}/{MOD_NAME}')
                      and os.path.exists(f'{MOD_REPO_DIR}/{MOD_NAME}/chimaera_mod.yaml')]
         MOD_NAMES = sorted(MOD_NAMES) 
         subdirs = '\n'.join([f'add_subdirectory({MOD_NAME})' 
                              for MOD_NAME in MOD_NAMES])
-        repo_cmake = BASE_REPO_CMAKE.format(namespace=namespace, subdirs=subdirs, camel_ns=camel_ns)
+        repo_cmake = BASE_REPO_CMAKE.format(namespace=self.namespace, subdirs=subdirs, camel_ns=camel_ns)
         with open(f'{MOD_REPO_DIR}/CMakeLists.txt', 'w') as fp:
             fp.write(repo_cmake)
 
@@ -237,12 +238,14 @@ class ChimaeraCodegen:
             self.methods = self.scan_compiled_tasks()
         self.mark_new_methods_uncompiled()
 
-    def refresh_methods(self, MOD_ROOT):
+    def refresh_mod_tasks(self, MOD_ROOT):
         """
         Refreshes autogenerated code in the task.
         """
         if not os.path.exists(f'{MOD_ROOT}/include'):
             return
+        self.mod_name = os.path.basename(MOD_ROOT)
+
         #Create paths
         MOD_NAME = os.path.basename(MOD_ROOT)
         self.METHODS_YAML = f'{MOD_ROOT}/include/{MOD_NAME}/{MOD_NAME}_methods.yaml'
@@ -468,9 +471,22 @@ class ChimaeraCodegen:
             fp.write('\n'.join(lines))
 
     def refresh_tasks_h(self):
+        self.correct_lib_name()
         self.refresh_method_try_modes(
             self.OLD_TASKS_H, 
             self.NEW_TASKS_H, task_template)
+
+    def correct_lib_name(self):
+        with open(self.OLD_TASKS_H) as fp:
+            content = fp.read()
+        # Replace lib_name_ with namespace_mod_name version
+        old_text = f'lib_name_ = "{self.mod_name}"'
+        new_text = f'lib_name_ = "{self.namespace}_{self.mod_name}"'
+        if old_text in content:
+            print(f"Fixing lib_name_ from {self.mod_name} to {self.namespace}_{self.mod_name}")
+            content = content.replace(old_text, new_text)
+            with open(self.OLD_TASKS_H, 'w') as fp:
+                fp.write(content)
 
     def refresh_client_h(self):
         self.refresh_method_try_modes(
