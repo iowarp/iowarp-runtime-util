@@ -97,6 +97,9 @@ class RepoReformat:
         content = content.replace(f"add_chimod_library(${{MOD_NAMESPACE}} {mod_name} {mod_name}.cc)",
                     "add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_runtime.cc)\n" + 
                     "add_chimod_client_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_client.cc)")
+        content = content.replace(f"add_chimod_library(${{MOD_NAMESPACE}} {mod_name} {mod_name}_runtime.cc)",
+                    "add_chimod_runtime_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_runtime.cc)\n" + 
+                    "add_chimod_client_lib(${MOD_NAMESPACE} " + mod_name + " " + mod_name + "_client.cc)")
         content = content.replace('MOD_NAMESPACE', 'REPO_NAMESPACE')
         with open(cmake_path, 'w') as f:
             f.write(content)
