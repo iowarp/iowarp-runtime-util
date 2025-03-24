@@ -528,7 +528,7 @@ class ChimaeraCodegen:
             self.refresh_insert_commit()
             with open(orig_path, 'w') as fp:
                 fp.write(''.join(self.content))
-        else:
+        elif 'CHI_AUTOGEN_METHODS' not in self.chi_ends:
             self.refresh_tmpfile(new_path, tmpl_name)
 
     def get_method_name(self, sorted_off):
