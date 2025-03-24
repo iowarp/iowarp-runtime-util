@@ -76,7 +76,7 @@ runtime_method_template = """
 BASE_REPO_CMAKE = """
 cmake_minimum_required(VERSION 3.25)
 project({namespace})
-set(MOD_NAMESPACE {namespace})
+set(REPO_NAMESPACE {namespace})
 
 # FIND CHIMAERA
 if (NOT CHIMAERA_IS_MAIN_PROJECT)
