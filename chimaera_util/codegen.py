@@ -132,8 +132,8 @@ class ChimaeraCodegen:
         """
         with open(f'{CHIMAERA_TASK_TEMPL}/{rel_path}') as fp:
             text = fp.read()
-        text = text.replace('MOD_NAME', self.mod_name)
         text = text.replace('chimaera_MOD_NAME', f'{self.namespace}_{self.mod_name}')
+        text = text.replace('MOD_NAME', self.mod_name)
         rel_path = rel_path.replace('MOD_NAME', self.mod_name)
         with open(f'{MOD_ROOT}/{rel_path}', 'w') as fp:
             fp.write(text)
@@ -482,13 +482,17 @@ class ChimaeraCodegen:
         with open(self.OLD_TASKS_H) as fp:
             content = fp.read()
         # Replace lib_name_ with namespace_mod_name version
-        old_text = f'lib_name_ = "{self.mod_name}"'
+        old_texts = [
+            f'lib_name_ = "{self.mod_name}"',
+            f'lib_name_ = "chimaera_{self.mod_name}"',
+        ]
         new_text = f'lib_name_ = "{self.namespace}_{self.mod_name}"'
-        if old_text in content:
-            print(f"Fixing lib_name_ from {self.mod_name} to {self.namespace}_{self.mod_name}")
-            content = content.replace(old_text, new_text)
-            with open(self.OLD_TASKS_H, 'w') as fp:
-                fp.write(content)
+        for old_text in old_texts:
+            if old_text in content:
+                print(f"Fixing lib_name_ from {self.mod_name} to {self.namespace}_{self.mod_name}")
+                content = content.replace(old_text, new_text)
+                with open(self.OLD_TASKS_H, 'w') as fp:
+                    fp.write(content)
 
     def refresh_client_h(self):
         self.refresh_method_try_modes(
