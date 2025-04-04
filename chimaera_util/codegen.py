@@ -88,10 +88,13 @@ class ChimaeraCodegen:
         print(f'Created module repository at {MOD_REPO_DIR}')
 
     def load_repo_config(self, MOD_REPO_DIR):
-        MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
-        with open(f'{MOD_REPO_DIR}/chimaera_repo.yaml') as fp:
-            config = yaml.load(fp, Loader=yaml.FullLoader)
-        self.namespace = config['namespace']
+        try:
+            MOD_REPO_DIR = os.path.abspath(MOD_REPO_DIR)
+            with open(f'{MOD_REPO_DIR}/chimaera_repo.yaml') as fp:
+                config = yaml.load(fp, Loader=yaml.FullLoader)
+            self.namespace = config['namespace']
+        except:
+            print(f'{MOD_REPO_DIR} does not have a chimaera_repo.yaml file.')
         return config
 
     def save_repo_config(self, MOD_REPO_DIR, repo_conf):
@@ -176,15 +179,27 @@ class ChimaeraCodegen:
             method_defs = {}
         self.method_defs = method_defs
 
+    def get_task_name_from_line(self, line):
+        match_set = [
+            re.search(r'struct\s+(.*)Task :', line),
+            re.search(r'CHI_BEGIN\((.*?)\)', line),
+            re.search(r'CHI_END\((.*?)\)', line),
+        ]
+        for match in match_set:
+            if not match:
+                continue
+            task_name = match.group(1)
+            return task_name
+        return None
+
     def scan_compiled_tasks(self):
         methods = {}
         if os.path.exists(self.OLD_TASKS_H):
             with open(self.OLD_TASKS_H) as fp:
                 for line in fp:
-                    match = re.search(r'struct\s+(.*)Task', line)
-                    if not match:
+                    task_name = self.get_task_name_from_line(line)
+                    if task_name is None:
                         continue
-                    task_name = match.group(1)
                     method_name = f'k{task_name}'
                     if method_name not in self.method_defs:
                         continue
@@ -231,13 +246,14 @@ class ChimaeraCodegen:
 
     def get_method_compile_status(self):
         self.load_method_defs()
-        try:
-            with open(self.COMPILED_METHODS_YAML) as fp:
-                self.methods = yaml.load(fp, Loader=yaml.FullLoader)
-        except:
-            self.methods = None
-        if self.methods is None:
-            self.methods = self.scan_compiled_tasks()
+        self.methods = self.scan_compiled_tasks()
+        # try:
+        #     with open(self.COMPILED_METHODS_YAML) as fp:
+        #         self.methods = yaml.load(fp, Loader=yaml.FullLoader)
+        # except:
+        #     self.methods = None
+        # if self.methods is None:
+        #     self.methods = self.scan_compiled_tasks()
         self.mark_new_methods_uncompiled()
 
     def refresh_mod_tasks(self, MOD_ROOT):

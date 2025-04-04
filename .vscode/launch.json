@@ -6,8 +6,8 @@
             "type": "python",
             "python": "/home/llogan/.venv/bin/python",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/chi_make_mod",
-            "args": ["/home/llogan/my_mod_repo/compressor"],
+            "program": "${workspaceFolder}/bin/chi_refresh_repo",
+            "args": ["/home/llogan/Documents/Projects/iowarp/content-transfer-engine/tasks"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
