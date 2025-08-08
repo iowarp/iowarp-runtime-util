@@ -3,7 +3,7 @@
 [![IoWarp](https://img.shields.io/badge/IoWarp-GitHub-blue.svg)](http://github.com/iowarp)
 [![GRC](https://img.shields.io/badge/GRC-Website-blue.svg)](https://grc.iit.edu/)
 [![Python](https://img.shields.io/badge/Python-3.7+-yellow.svg)](https://www.python.org/)
-[![Chimaera](https://img.shields.io/badge/Chimaera-Runtime-purple.svg)](https://github.com/iowarp/iowarp-runtime)
+[![IOWarp-Runtine](https://img.shields.io/badge/IOWarp-Runtime-purple.svg)](https://github.com/iowarp/iowarp-runtime)
 
 A Python library for automating code generation and module management for the IOWarp Runtime (Chimaera).
 
