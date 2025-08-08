@@ -1,8 +1,22 @@
-# Chimaera Codegen 
+# IOWarp Runtime Utilities
 
-A Python Library for Chimaera Code Generation
+[![IoWarp](https://img.shields.io/badge/IoWarp-GitHub-blue.svg)](http://github.com/iowarp)
+[![GRC](https://img.shields.io/badge/GRC-Website-blue.svg)](https://grc.iit.edu/)
+[![Python](https://img.shields.io/badge/Python-3.7+-yellow.svg)](https://www.python.org/)
+[![Chimaera](https://img.shields.io/badge/Chimaera-Runtime-purple.svg)](https://github.com/iowarp/iowarp-runtime)
 
-This repository is used to help automate code generation for the IOWarp Runtime: Chimaera.
+A Python library for automating code generation and module management for the IOWarp Runtime (Chimaera).
+
+## Purpose
+
+IOWarp Runtime Utilities provides a comprehensive set of tools to help developers automate code generation, module creation, and repository management for the Chimaera runtime. This library simplifies the development workflow for creating high-performance I/O modules, compression, encryption, and other runtime functionalities.
+
+## Installation
+
+We recommend using a local installation. The scripts assume they are called from the git clone directory.
+```bash
+pip install -e .
+```
 
 ## Concepts
 
@@ -10,17 +24,11 @@ This repository is used to help automate code generation for the IOWarp Runtime:
 A **module repository** is a directory that contains a set of modules and a `chimaera_repo.yaml` file. It serves as a container for organizing related modules that can be managed and built together.
 
 ### Module
-A **module** represents a specific functionality to be executed in the runtime, such as an I/O system, compression, or encryption. Each module resides within a module repository and contains a `chimaera_mod.yaml` file (which is currently empty).
-
-## Installation
-
-We recommend using a local installation. The scripts
-assume they are called from the git clone directory.
-```
-pip install -e .
-```
+A **module** represents a specific functionality to be executed in the runtime, such as an I/O system, compression, or encryption. Each module resides within a module repository and contains a `chimaera_mod.yaml` file.
 
 ## Usage
+
+The following utility commands are available after installation:
 
 ### 1. `chi_clear_temp`
 - **Usage:** `./chi_clear_temp [MOD_REPO_DIR]`
@@ -53,3 +61,17 @@ pip install -e .
   - Updates references in source and include files.
   - Modifies CMake files to use updated function names and namespaces.
   - Creates backups and new client source files as needed.
+
+## Project Structure
+
+- `bin/` - Utility scripts
+- `chimaera_util/` - Core Python library
+- `setup.py` - Package configuration
+
+
+## Support
+
+For issues, questions, or contributions, please:
+- Open an issue on the [GitHub repository](https://github.com/iowarp/iowarp-runtime-util)
+- Refer to the [IOWarp Runtime documentation](https://github.com/iowarp/iowarp-runtime) for runtime-specific questions
+- Contact the Gnosis Research Center at Illinois Institute of Technology
